@@ -71,6 +71,6 @@ class TestAuthAPI:
         # URL для аутентификации
         login_url = f'{BASE_URL}{LOGIN_ENDPOINT}'
 
-        empty_body_response = requests.post(login_url, headers=HEADERS)
+        response = requests.post(login_url, headers=HEADERS)
 
-        assert empty_body_response.status_code == 401, 'Пустое тело запроса принято' # баг? пришло 401, а по доке 400.
+        assert response.status_code == 401, 'Пустое тело запроса принято' # баг? пришло 401, а по доке 400.
