@@ -2,25 +2,33 @@ import pytest
 import requests
 from faker import Faker
 from constants import HEADERS, BASE_URL
+from custom_requester import CustomRequester
 
 faker = Faker()
 
 @pytest.fixture(scope="session")
-def auth_session():
+def requester():
+    """
+    Фикстура для создания экземпляра CustomRequester.
+    """
     session = requests.Session()
-    session.headers.update(HEADERS)
+    return CustomRequester(session=session, base_url=BASE_URL)
 
-    response = requests.post(
-        f"{BASE_URL}/auth",
-        headers=HEADERS,
-        json={"username": "admin", "password": "password123"}
-    )
-    assert response.status_code == 200, "Ошибка авторизации"
+@pytest.fixture(scope="session")
+def requester_with_auth_session(requester):
+    requester.session.headers.update(HEADERS)
+
+    response = requester.send_request(method='POST', endpoint='/auth', data={
+        "username": "admin",
+        "password": "password123"
+    })
+
     token = response.json().get("token")
     assert token is not None, "В ответе не оказалось токена"
 
-    session.headers.update({"Cookie": f"token={token}"})
-    return session
+    requester.session.headers.update({"Cookie": f"token={token}"})
+    return requester
+
 
 @pytest.fixture
 def booking_data():
@@ -93,4 +101,11 @@ def patch_empty_data():
     return {
       "firstname": None,
       "lastname": None
+    }
+
+@pytest.fixture
+def valid_auth_data():
+    return {
+        "username": "admin",
+        "password": "password123"
     }

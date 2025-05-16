@@ -2,62 +2,105 @@ import pytest
 import requests
 from faker import Faker
 from constants import BASE_URL
+import copy
 
 class TestBookings:
     fake = Faker()
 
-    def test_create_booking(self, auth_session, booking_data):
-        # Создаём бронирование
-        create_booking = auth_session.post(f"{BASE_URL}/booking", json=booking_data)
-        assert create_booking.status_code == 200, "Ошибка при создании брони"
+    def test_unauthorized_delete(self, requester_with_auth_session, booking_data):
+        created_response = requester_with_auth_session.send_request(
+            method='POST',
+            endpoint='/booking',
+            data=booking_data
+        )
 
-        booking_id = create_booking.json().get("bookingid")
+        bookingid = created_response.json()['bookingid']
+
+        copied_requester = copy.deepcopy(requester_with_auth_session)
+        copied_requester._update_session_headers(**{'Cookie': None})
+        deleted_response = copied_requester.send_request(
+            method='DELETE',
+            endpoint=f'/booking/{bookingid}',
+            expected_status=403,
+        )
+
+    def test_create_booking(self, requester_with_auth_session, booking_data):
+        # Создаём бронирование
+        create_booking = requester_with_auth_session.send_request(method='POST', endpoint= "/booking", data=booking_data)
+
+
+        booking_id = create_booking.json().get('bookingid')
         assert booking_id is not None, "Идентификатор брони не найден в ответе"
         assert create_booking.json()["booking"]["firstname"] == booking_data["firstname"], "Заданное имя не совпадает"
         assert create_booking.json()["booking"]["totalprice"] == booking_data["totalprice"], "Заданная стоимость не совпадает"
 
         # Проверяем, что бронирование можно получить по ID
-        get_booking = auth_session.get(f"{BASE_URL}/booking/{booking_id}")
-        assert get_booking.status_code == 200, "Бронь не найдена"
+        get_booking = requester_with_auth_session.send_request(
+            method='GET',
+            endpoint=f"/booking/{booking_id}"
+        )
         assert get_booking.json()["lastname"] == booking_data["lastname"], "Заданная фамилия не совпадает"
 
         # Удаляем бронирование
-        deleted_booking = auth_session.delete(f"{BASE_URL}/booking/{booking_id}")
-        assert deleted_booking.status_code == 201, "Бронь не удалилась"
+        deleted_booking = requester_with_auth_session.send_request(
+            method='DELETE',
+            endpoint=f"/booking/{booking_id}",
+            expected_status=201
+        )
 
         # Проверяем, что бронирование больше недоступно
-        get_booking = auth_session.get(f"{BASE_URL}/booking/{booking_id}")
-        assert get_booking.status_code == 404, "Бронь не удалилась"
+        get_booking = requester_with_auth_session.send_request(
+            method='GET',
+            endpoint=f"/booking/{booking_id}",
+            expected_status=404
+        )
 
 
-    def test_update_booking(self, auth_session, booking_data, put_data):
+    def test_update_booking(self, requester_with_auth_session, booking_data, put_data):
         # Создаем бронирование и проверяем, что оно создалось
-        create_booking = auth_session.post(f"{BASE_URL}/booking", json=booking_data)
-        assert create_booking.status_code == 200, "Ошибка при создании брони"
+        create_booking = requester_with_auth_session.send_request(
+            method='POST',
+            endpoint='/booking',
+            data=booking_data
+        )
 
         # Обновляем данные бронирования
         booking_id = create_booking.json()['bookingid']
-        put_booking_response = auth_session.put(f'{BASE_URL}/booking/{booking_id}', json=put_data)
-        assert put_booking_response.status_code == 200, 'Данные не обновились'
+        put_booking_response = requester_with_auth_session.send_request(
+            method='PUT',
+            endpoint=f'/booking/{booking_id}',
+            data=put_data
+        )
 
         # Проверяем, что данные действительно обновились
-        updated_booking = auth_session.get(f'{BASE_URL}/booking/{booking_id}')
-        assert updated_booking.status_code == 200, 'Не удалось получить данные обновленного бронирования'
+        updated_booking = requester_with_auth_session.send_request(
+            method='GET',
+            endpoint=f'/booking/{booking_id}'
+        )
         assert updated_booking.json() == put_data, 'Измененные данные не совпадают'
 
 
-    def test_patch_booking(self, auth_session, booking_data, patch_data):
+    def test_patch_booking(self, requester_with_auth_session, booking_data, patch_data):
         # Создаем бронирование и проверяем, что оно создалось
-        created_booking = auth_session.post(f"{BASE_URL}/booking", json=booking_data)
-        assert created_booking.status_code == 200, "Ошибка при создании брони"
+        created_booking = requester_with_auth_session.send_request(
+            method='POST',
+            endpoint="/booking",
+            data=booking_data
+        )
 
         #  Частично обновляем данные бронирования - имя и фамилию
         booking_id = created_booking.json()['bookingid']
-        patch_booking_response = auth_session.patch(f'{BASE_URL}/booking/{booking_id}', json=patch_data)
-        assert patch_booking_response.status_code == 200, 'Данные не обновились'
+        patch_booking_response = requester_with_auth_session.send_request(
+            method='PATCH',
+            endpoint=f'/booking/{booking_id}',
+            data=patch_data
+        )
 
         # Проверяем, что обновилось только то, что нужно
-        patched_booking = auth_session.get(f'{BASE_URL}/booking/{booking_id}')
+        patched_booking = requester_with_auth_session.send_request(
+            method='GET',
+            endpoint=f'/booking/{booking_id}'
+        )
         assert patched_booking.json()['firstname'] == patch_data['firstname'], 'Имя не совпадает'
         assert patched_booking.json()['lastname'] == patch_data['lastname'], 'Фамилия не совпадает'
 
@@ -69,22 +112,28 @@ class TestBookings:
         assert patched_booking.json()['additionalneeds'] == booking_data['additionalneeds'], 'Обновились данные доп услуг, которые не должны были'
 
 
-    def test_incorrect_create(self, auth_session, missing_required_data):
+    def test_incorrect_create(self, requester_with_auth_session, missing_required_data):
         # Создаем бронирование с пропущенным обязательным полем
-        created_booking_response = auth_session.post(f'{BASE_URL}/booking/', json=missing_required_data)
-        assert created_booking_response.status_code != 200, 'Бронирование создалось без обязательного поля'
+        created_booking_response = requester_with_auth_session.send_request(
+            method='POST',
+            endpoint='/booking/',
+            data=missing_required_data,
+            expected_status=500 # баг? код 500 на неправильный запрос
+        )
 
-    def test_invalide_type_data_create(self, auth_session, invalid_type_data):
-        # Создаем бронирование с пропущенным обязательным полем
-        created_booking_response = auth_session.post(f'{BASE_URL}/booking/', json=invalid_type_data)
-        assert created_booking_response.status_code != 200, 'Бронирование создалось с полем неправильного типа'
+    def test_invalide_type_data_create(self, requester_with_auth_session, invalid_type_data):
+        # Создаем бронирование с неправильным типом данных в totalprice (str вместо int)
+        created_booking_response = requester_with_auth_session.send_request(
+            method='POST',
+            endpoint='/booking/',
+            data=invalid_type_data,
+            expected_status=400 # баг. в поле totalprice принял str.
+        )
 
-        response = auth_session.get(f'{BASE_URL}/booking/{created_booking_response.json()["bookingid"]}')
-        print(response.json()) # bug: поле totalprice принял str
 
-    def test_update_not_existed_resource(self, auth_session):
+    def test_update_not_existed_resource(self, requester_with_auth_session):
         # Получаем айдишники всех существующих ресурсов в виде списка словарей
-        ids_lst = auth_session.get(f'{BASE_URL}/booking').json()
+        ids_lst = requester_with_auth_session.send_request(method='GET', endpoint='/booking', need_logging=False).json()
 
         # создаем множество существующих айдишинокв на основе списка
         ids_set = set()
@@ -99,27 +148,28 @@ class TestBookings:
         bookingid = random_id
 
         # Отправляем пут-запрос к ресурсу с этим несуществующим айдишником
-        updated_response = auth_session.put(f'{BASE_URL}/booking/{bookingid}')
+        updated_response = requester_with_auth_session.send_request(
+            method='PUT',
+            endpoint=f'/booking/{bookingid}',
+            expected_status=400
+        )
 
-        # Проверяем, что данные обновить не удалось
-        assert updated_response.status_code != 200, 'Обновились данные несуществующего ресурса'
 
 
-    def test_unauthorized_delete(self, auth_session, booking_data):
-        created_response = auth_session.post(f'{BASE_URL}/booking', json=booking_data)
-
-        bookingid = created_response.json()['bookingid']
-
-        deleted_response = requests.delete(f'{BASE_URL}/booking/{bookingid}')
-        assert deleted_response.status_code == 403, 'Не получили Unauthorized Error'
-
-    def test_patch_empty_data_booking(self, auth_session, booking_data, patch_empty_data):
+    def test_patch_empty_data_booking(self, requester_with_auth_session, booking_data, patch_empty_data):
         # Создаем бронирование и проверяем, что оно создалось
-        created_booking = auth_session.post(f"{BASE_URL}/booking", json=booking_data)
-        assert created_booking.status_code == 200, "Ошибка при создании брони"
+        created_booking = requester_with_auth_session.send_request(
+            method='POST',
+            endpoint="/booking",
+            data=booking_data
+        )
 
         #  Частично обновляем данные бронирования - имя и фамилию
         booking_id = created_booking.json()['bookingid']
-        patch_booking_response = auth_session.patch(f'{BASE_URL}/booking/{booking_id}', json=patch_empty_data)
-        assert patch_booking_response.status_code != 200, 'Данные обновились некорректно' # баг обновилось на пустые данные
+        patch_booking_response = requester_with_auth_session.send_request(
+            method='PATCH',
+            endpoint=f'/booking/{booking_id}',
+            data=patch_empty_data,
+            expected_status=400 # баг обновилось на пустые данные
+        )
 
