@@ -34,7 +34,7 @@ class TestAuthApiWithoutCustomWrapper:
 
         assert authorized_response.status_code == 201, 'Аутентификация не прошла'
 
-        assert 'accessToken' in authorized_response.json(), 'Token от сутствует в ответе'
+        assert 'accessToken' in authorized_response.json(), 'Token отсутствует в ответе'
         assert authorized_response.json()['user']['email'] == auth_user_data['email'], 'Email ответа не совпадает с отправленным'
 
     def test_invalid_password(self, auth_user_data):

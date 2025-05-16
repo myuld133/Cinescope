@@ -52,11 +52,9 @@ def auth_session(test_user):
 
 
 @pytest.fixture(scope='function')
-def auth_user_data(test_user):
+def auth_user_data(requester, test_user):
     # Регистрируем нового пользователя
-    register_url = f'{BASE_URL}{REGISTER_ENDPOINT}'
-    response = requests.post(register_url, json=test_user, headers=HEADERS)
-    assert response.status_code == 201, 'Ошибка регистрации пользователя'
+    requester.send_request(method='POST', endpoint=REGISTER_ENDPOINT, data=test_user, expected_status=201)
 
     # Создаем словарь с входными данными
     auth_data = {'email': test_user['email'],

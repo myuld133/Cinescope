@@ -1,8 +1,4 @@
-import pytest
-import requests
-from constants import BASE_URL, HEADERS, REGISTER_ENDPOINT, LOGIN_ENDPOINT
-from custom_requester.custom_requester import CustomRequester
-from api.api_manager import ApiManager
+from constants import REGISTER_ENDPOINT, LOGIN_ENDPOINT
 
 
 class TestAuthAPI:
@@ -44,3 +40,58 @@ class TestAuthAPI:
         # Проверки
         assert "accessToken" in response_data, "Токен доступа отсутствует в ответе"
         assert response_data["user"]["email"] == registered_user["email"], "Email не совпадает"
+
+
+    def test_login(self, requester, auth_user_data): # Обсудить с Николаем фикстуру
+        # Создание запроса на аутентификацию
+        authorized_response = requester.send_request(
+            method='POST',
+            endpoint=LOGIN_ENDPOINT,
+            data=auth_user_data,
+            expected_status=201
+        )
+
+        # Проверки
+        assert 'accessToken' in authorized_response.json(), 'Token отсутствует в ответе'
+        assert authorized_response.json()['user']['email'] == auth_user_data['email'], 'Email ответа не совпадает с отправленным'
+
+
+    def test_invalid_password(self, requester, auth_user_data):
+        # Создание неверных данных
+        auth_user_data['password'] = 'incorrect'
+
+        # Создание запроса на аутентификацию с неверным паролем
+        not_authorized_response = requester.send_request(
+            method='POST',
+            endpoint=LOGIN_ENDPOINT,
+            data=auth_user_data,
+            expected_status=401
+        )
+
+        # Проверки
+        assert "Неверный логин или пароль" in not_authorized_response.text, 'Тело ответа не содержит сообщение об ошибке'
+
+
+    def test_invalid_email(self, requester, auth_user_data):
+        # Создание неверных данных
+        auth_user_data['email'] = 'incorrect@gmail.com'
+
+        # Создание запроса на аутентификацию с неверным паролем
+        not_authorized_response = requester.send_request(
+            method='POST',
+            endpoint=LOGIN_ENDPOINT,
+            data=auth_user_data,
+            expected_status=401
+        )
+
+        assert "Неверный логин или пароль" in not_authorized_response.text, 'Тело ответа не содержит сообщение об ошибке'
+
+
+    def test_post_with_empty_body(self, requester):
+        # Отправка запроса с пустым телом
+        requester.send_request(
+            method='POST',
+            endpoint=LOGIN_ENDPOINT,
+            data=None,
+            expected_status=401
+        )
