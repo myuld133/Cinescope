@@ -1,17 +1,12 @@
-from constants import REGISTER_ENDPOINT, LOGIN_ENDPOINT
+from api.api_manager import ApiManager
 
 
 class TestAuthAPI:
-    def test_register_user(self, requester, test_user):
+    def test_register_user(self, api_manager: ApiManager, test_user):
         """
         Тест на регистрацию пользователя.
         """
-        response = requester.send_request(
-            method="POST",
-            endpoint=REGISTER_ENDPOINT,
-            data=test_user,
-            expected_status=201
-        )
+        response = api_manager.auth_api.register_user(test_user)
         response_data = response.json()
 
         # Проверки
@@ -21,7 +16,7 @@ class TestAuthAPI:
         assert "USER" in response_data["roles"], "Роль USER должна быть у пользователя"
 
 
-    def test_register_and_login_user(self, requester, registered_user):
+    def test_register_and_login_user(self, api_manager: ApiManager, registered_user):
         """
         Тест на регистрацию и авторизацию пользователя.
         """
@@ -29,12 +24,7 @@ class TestAuthAPI:
             "email": registered_user["email"],
             "password": registered_user["password"]
         }
-        response = requester.send_request(
-            method="POST",
-            endpoint=LOGIN_ENDPOINT,
-            data=login_data,
-            expected_status=201
-        )
+        response = api_manager.auth_api.login_user(login_data)
         response_data = response.json()
 
         # Проверки
@@ -42,56 +32,37 @@ class TestAuthAPI:
         assert response_data["user"]["email"] == registered_user["email"], "Email не совпадает"
 
 
-    def test_login(self, requester, auth_user_data): # Обсудить с Николаем фикстуру
+    def test_login(self, api_manager: ApiManager, auth_user_data): # Обсудить с Николаем фикстуру
         # Создание запроса на аутентификацию
-        authorized_response = requester.send_request(
-            method='POST',
-            endpoint=LOGIN_ENDPOINT,
-            data=auth_user_data,
-            expected_status=201
-        )
+        authorized_response = api_manager.auth_api.login_user(auth_user_data)
 
         # Проверки
         assert 'accessToken' in authorized_response.json(), 'Token отсутствует в ответе'
         assert authorized_response.json()['user']['email'] == auth_user_data['email'], 'Email ответа не совпадает с отправленным'
 
 
-    def test_invalid_password(self, requester, auth_user_data):
+    def test_invalid_password(self, api_manager: ApiManager, auth_user_data):
         # Создание неверных данных
-        auth_user_data['password'] = 'incorrect'
+        copied_auth_user_data = auth_user_data.copy()
+        copied_auth_user_data['password'] = 'incorrect'
 
         # Создание запроса на аутентификацию с неверным паролем
-        not_authorized_response = requester.send_request(
-            method='POST',
-            endpoint=LOGIN_ENDPOINT,
-            data=auth_user_data,
-            expected_status=401
-        )
+        bad_password_response = api_manager.auth_api.login_user(copied_auth_user_data, expected_status=401)
 
         # Проверки
-        assert "Неверный логин или пароль" in not_authorized_response.text, 'Тело ответа не содержит сообщение об ошибке'
+        assert "Неверный логин или пароль" in bad_password_response.text, 'Тело ответа не содержит сообщение об ошибке'
 
 
-    def test_invalid_email(self, requester, auth_user_data):
+    def test_invalid_email(self, api_manager: ApiManager, auth_user_data):
         # Создание неверных данных
-        auth_user_data['email'] = 'incorrect@gmail.com'
+        copied_auth_user_data = auth_user_data.copy()
+        copied_auth_user_data['email'] = 'incorrect@gmail.com'
 
         # Создание запроса на аутентификацию с неверным паролем
-        not_authorized_response = requester.send_request(
-            method='POST',
-            endpoint=LOGIN_ENDPOINT,
-            data=auth_user_data,
-            expected_status=401
-        )
+        bad_email_response = api_manager.auth_api.login_user(copied_auth_user_data, expected_status=401)
 
-        assert "Неверный логин или пароль" in not_authorized_response.text, 'Тело ответа не содержит сообщение об ошибке'
+        assert "Неверный логин или пароль" in bad_email_response.text, 'Тело ответа не содержит сообщение об ошибке'
 
 
-    def test_post_with_empty_body(self, requester):
-        # Отправка запроса с пустым телом
-        requester.send_request(
-            method='POST',
-            endpoint=LOGIN_ENDPOINT,
-            data=None,
-            expected_status=401
-        )
+    def test_post_with_empty_body(self, api_manager: ApiManager):
+        api_manager.auth_api.login_user(login_data=None, expected_status=401)

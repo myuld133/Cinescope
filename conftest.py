@@ -1,10 +1,11 @@
-from faker import Faker
 import pytest
 import requests
+from faker import Faker
+
+from api.api_manager import ApiManager
 from constants import HEADERS, BASE_URL, REGISTER_ENDPOINT, LOGIN_ENDPOINT
 from custom_requester.custom_requester import CustomRequester
 from utils.data_generator import DataGenerator
-from api.api_manager import ApiManager
 
 faker = Faker()
 
@@ -52,10 +53,9 @@ def auth_session(test_user):
 
 
 @pytest.fixture(scope='function')
-def auth_user_data(requester, test_user):
+def auth_user_data(api_manager, test_user):
     # Регистрируем нового пользователя
-    requester.send_request(method='POST', endpoint=REGISTER_ENDPOINT, data=test_user, expected_status=201)
-
+    api_manager.auth_api.register_user(test_user)
     # Создаем словарь с входными данными
     auth_data = {'email': test_user['email'],
                  'password': test_user['password']
@@ -63,16 +63,12 @@ def auth_user_data(requester, test_user):
     return auth_data
 
 @pytest.fixture(scope="function")
-def registered_user(requester, test_user):
+def registered_user(api_manager, test_user):
     """
     Фикстура для регистрации и получения данных зарегистрированного пользователя.
     """
-    response = requester.send_request(
-        method="POST",
-        endpoint=REGISTER_ENDPOINT,
-        data=test_user,
-        expected_status=201
-    )
+    response = api_manager.auth_api.register_user(test_user)
+
     response_data = response.json()
     registered_user = test_user.copy()
     registered_user["id"] = response_data["id"]
@@ -85,3 +81,19 @@ def requester():
     """
     session = requests.Session()
     return CustomRequester(session=session, base_url=BASE_URL)
+
+@pytest.fixture(scope="session")
+def session():
+    """
+    Фикстура для создания HTTP-сессии.
+    """
+    http_session = requests.Session()
+    yield http_session
+    http_session.close()
+
+@pytest.fixture(scope="session")
+def api_manager(session):
+    """
+    Фикстура для создания экземпляра ApiManager.
+    """
+    return ApiManager(session)
