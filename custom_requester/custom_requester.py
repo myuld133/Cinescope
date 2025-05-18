@@ -1,6 +1,5 @@
 
 import json
-import requests
 import logging
 import os
 
@@ -90,11 +89,10 @@ class CustomRequester:
 
 
 
-    def _update_session_headers(self, session, **kwargs):
+    def _update_session_headers(self, **kwargs):
         """
         Обновление заголовков сессии.
-        :param session: Объект requests.Session, предоставленный API-классом.
         :param kwargs: Дополнительные заголовки.
         """
         self.headers.update(kwargs)  # Обновляем базовые заголовки
-        session.headers.update(self.headers)  # Обновляем заголовки в текущей сессии
+        self.session.headers.update(self.headers)  # Обновляем заголовки в текущей сессии

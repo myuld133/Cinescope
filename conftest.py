@@ -3,8 +3,6 @@ import requests
 from faker import Faker
 
 from api.api_manager import ApiManager
-from constants import HEADERS, BASE_URL, REGISTER_ENDPOINT, LOGIN_ENDPOINT
-from custom_requester.custom_requester import CustomRequester
 from utils.data_generator import DataGenerator
 
 faker = Faker()
@@ -25,31 +23,6 @@ def test_user():
         'passwordRepeat': random_password,
         'roles': ['USER']
     }
-
-@pytest.fixture(scope='session')
-def auth_session(test_user):
-    # Регистрируем нового пользователя
-    register_url = f'{BASE_URL}{REGISTER_ENDPOINT}'
-    response = requests.post(register_url, json=test_user, headers=HEADERS)
-    assert response.status_code == 201, 'Ошибка регистрации пользователя'
-
-    # Логинимся для получения токена
-    login_url = f'{BASE_URL}{LOGIN_ENDPOINT}'
-    login_data = {
-        'email': test_user['email'],
-        'password': test_user['password']
-    }
-    response = requests.post(login_url, json=login_data, headers=HEADERS)
-    assert response.status_code == 200, 'Ошибка авторизации'
-
-    # Получаем токен и создаем сессию
-    token = response.json().get('accessToken')
-    assert token is not None, 'Токен доступа отсутствует в ответе'
-
-    session = requests.Session()
-    session.headers.update(HEADERS)
-    session.headers.update({'Authorization': f'Bearer {token}'})
-    return session
 
 
 @pytest.fixture(scope='function')
@@ -73,14 +46,6 @@ def registered_user(api_manager, test_user):
     registered_user = test_user.copy()
     registered_user["id"] = response_data["id"]
     return registered_user
-
-@pytest.fixture(scope="session")
-def requester():
-    """
-    Фикстура для создания экземпляра CustomRequester.
-    """
-    session = requests.Session()
-    return CustomRequester(session=session, base_url=BASE_URL)
 
 @pytest.fixture(scope="session")
 def session():
