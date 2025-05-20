@@ -1,3 +1,5 @@
+import random
+
 import pytest
 import requests
 from faker import Faker
@@ -5,7 +7,7 @@ from faker import Faker
 from api.api_manager import ApiManager
 from utils.data_generator import DataGenerator
 
-faker = Faker()
+faker = Faker('ru_RU')
 
 @pytest.fixture(scope='function')
 def test_user():
@@ -35,6 +37,7 @@ def auth_user_data(api_manager, test_user):
                  }
     return auth_data
 
+
 @pytest.fixture(scope="function")
 def registered_user(api_manager, test_user):
     """
@@ -47,6 +50,7 @@ def registered_user(api_manager, test_user):
     registered_user["id"] = response_data["id"]
     return registered_user
 
+
 @pytest.fixture(scope="session")
 def session():
     """
@@ -56,9 +60,45 @@ def session():
     yield http_session
     http_session.close()
 
+
 @pytest.fixture(scope="session")
 def api_manager(session):
     """
     Фикстура для создания экземпляра ApiManager.
     """
     return ApiManager(session)
+
+
+@pytest.fixture(scope='function')
+def film_data():
+    """
+    Генерация случайного фильма для тестов
+    """
+    random_name = faker.catch_phrase()
+    random_url = faker.url()
+    random_price = faker.random_int()
+    random_description = faker.text()
+    locations = ['SPB', 'MSK']
+    random_location = random.choice(locations)
+    random_published = faker.boolean()
+    random_genreId = faker.random_int(min=1, max=3)
+
+    return {
+        "name": random_name,
+        "imageUrl": random_url,
+        "price": random_price,
+        "description": random_description,
+        "location": random_location,
+        "published": random_published,
+        "genreId": random_genreId
+    }
+
+@pytest.fixture()
+def review_data():
+    random_rating = random.randint(1, 5)
+    random_text = faker.sentence()
+
+    return {
+        'rating': random_rating,
+        'text': random_text
+    }

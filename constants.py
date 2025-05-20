@@ -6,3 +6,9 @@ HEADERS = {
 
 LOGIN_ENDPOINT = '/login'
 REGISTER_ENDPOINT = '/register'
+MOVIES_ENDPOINT = '/movies'
+
+ADMIN_CREDS = {
+    'email': 'test-admin@mail.com',
+    'password': 'KcLMmxkJMjBD1'
+}
