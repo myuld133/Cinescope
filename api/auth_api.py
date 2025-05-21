@@ -22,7 +22,7 @@ class AuthAPI(CustomRequester):
             expected_status=expected_status
         )
 
-    def login_user(self, login_data, expected_status=200):
+    def login_user(self, login_data, expected_status=(200, 201)):
         """
         Авторизация пользователя.
         :param login_data: Данные для логина.
@@ -47,3 +47,6 @@ class AuthAPI(CustomRequester):
 
         token = response["accessToken"]
         self._update_session_headers(**{"authorization": "Bearer " + token})
+
+    def none_authenticate(self):
+        self._update_session_headers(**{'authorization': None})

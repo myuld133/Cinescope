@@ -11,13 +11,12 @@ class MoviesAPI(CustomRequester):
         super().__init__(session=session, base_url="https://api.dev-cinescope.coconutqa.ru")
 
     def get_list_all_movies(self, expected_status=200, params=None):
-        response = self.send_request(
+        return self.send_request(
             method='GET',
             endpoint=MOVIES_ENDPOINT,
             expected_status=expected_status,
             params=params
         )
-        return response.json()['movies']
 
     def get_one_movie(self, movie_id, expected_status=200):
         return self.send_request(
@@ -48,7 +47,7 @@ class MoviesAPI(CustomRequester):
             expected_status=expected_status
         )
 
-    def create_review(self, movie_id, review_data, expected_status=200):
+    def create_review(self, movie_id, review_data, expected_status=(200, 201)):
         return self.send_request(
             method='POST',
             endpoint=f'{MOVIES_ENDPOINT}/{movie_id}/reviews',

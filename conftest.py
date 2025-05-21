@@ -5,6 +5,7 @@ import requests
 from faker import Faker
 
 from api.api_manager import ApiManager
+from constants import ADMIN_CREDS
 from utils.data_generator import DataGenerator
 
 faker = Faker('ru_RU')
@@ -74,31 +75,35 @@ def film_data():
     """
     Генерация случайного фильма для тестов
     """
-    random_name = faker.catch_phrase()
-    random_url = faker.url()
-    random_price = faker.random_int()
-    random_description = faker.text()
     locations = ['SPB', 'MSK']
-    random_location = random.choice(locations)
-    random_published = faker.boolean()
-    random_genreId = faker.random_int(min=1, max=3)
 
     return {
-        "name": random_name,
-        "imageUrl": random_url,
-        "price": random_price,
-        "description": random_description,
-        "location": random_location,
-        "published": random_published,
-        "genreId": random_genreId
+        "name": faker.catch_phrase(),
+        "imageUrl": faker.url(),
+        "price": faker.random_int(min=100, max=1000),
+        "description": faker.text(),
+        "location": random.choice(locations),
+        "published": faker.boolean(),
+        "genreId": faker.random_int(min=1, max=10)
     }
 
 @pytest.fixture()
 def review_data():
-    random_rating = random.randint(1, 5)
-    random_text = faker.sentence()
-
     return {
-        'rating': random_rating,
-        'text': random_text
+        'rating': random.randint(1, 5),
+        'text': faker.sentence()
     }
+
+@pytest.fixture()
+def created_film_data(api_manager: ApiManager, film_data):
+    api_manager.auth_api.authenticate(ADMIN_CREDS)
+
+    # Создаем новый фильм
+    created_film_response = api_manager.movies_api.create_new_film(film_data=film_data)
+    created_film_data = created_film_response.json()
+
+    yield created_film_data
+
+    # Удаляем фильм
+    movie_id = created_film_data.get('id')
+    api_manager.movies_api.delete_film(movie_id=movie_id)
