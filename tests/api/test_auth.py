@@ -1,5 +1,9 @@
-from api.api_manager import ApiManager
+import pytest
 
+from api.api_manager import ApiManager
+from resources.user_creds import SuperAdminCreds
+
+pytestmark = pytest.mark.api
 
 class TestAuthAPI:
     def test_register_user(self, api_manager: ApiManager, test_user):
@@ -66,3 +70,15 @@ class TestAuthAPI:
 
     def test_post_with_empty_body(self, api_manager: ApiManager):
         api_manager.auth_api.login_user(login_data=None, expected_status=401)
+
+    @pytest.mark.parametrize("email,password,expected_status", [
+        (f"{SuperAdminCreds.USERNAME}", f"{SuperAdminCreds.PASSWORD}", (200, 201)),
+        ("test_login1@email.com", "asdqwe123Q!", (400, 401)),  # Сервис не может обработать логин по незареганному юзеру
+        ("", "password", (400, 401)),
+    ], ids=["Admin login", "Invalid user", "Empty username"])
+    def test_login_with_parametrization(self, email, password, expected_status, api_manager):
+        login_data = {
+            "email": email,
+            "password": password
+        }
+        api_manager.auth_api.login_user(login_data=login_data, expected_status=expected_status)

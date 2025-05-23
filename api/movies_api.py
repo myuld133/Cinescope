@@ -1,14 +1,13 @@
-from constants import MOVIES_ENDPOINT
+from constants.constants import MOVIES_ENDPOINT
 from custom_requester.custom_requester import CustomRequester
 
 
 class MoviesAPI(CustomRequester):
-    """
-      Класс для работы с афишей фильмов.
-      """
+    MOVIE_BASE_URL = "https://api.dev-cinescope.coconutqa.ru/"
 
     def __init__(self, session):
-        super().__init__(session=session, base_url="https://api.dev-cinescope.coconutqa.ru")
+        self.session = session
+        super().__init__(session, self.MOVIE_BASE_URL)
 
     def get_list_all_movies(self, expected_status=200, params=None):
         return self.send_request(

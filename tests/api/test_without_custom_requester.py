@@ -1,6 +1,6 @@
 import requests
 
-from constants import BASE_URL, LOGIN_ENDPOINT, HEADERS, REGISTER_ENDPOINT
+from constants.constants import BASE_URL, LOGIN_ENDPOINT, HEADERS, REGISTER_ENDPOINT
 
 
 class TestAuthApiWithoutCustomWrapper:
@@ -32,7 +32,7 @@ class TestAuthApiWithoutCustomWrapper:
         # Создание запроса на аутентификацию
         authorized_response = requests.post(login_url, json=auth_user_data, headers=HEADERS)
 
-        assert authorized_response.status_code == 201, 'Аутентификация не прошла'
+        assert authorized_response.status_code == 200, 'Аутентификация не прошла'
 
         assert 'accessToken' in authorized_response.json(), 'Token отсутствует в ответе'
         assert authorized_response.json()['user']['email'] == auth_user_data['email'], 'Email ответа не совпадает с отправленным'

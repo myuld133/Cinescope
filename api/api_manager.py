@@ -1,6 +1,6 @@
 from api.auth_api import AuthAPI
 from api.movies_api import MoviesAPI
-from api.user_api import UserAPI
+from api.user_api import UserApi
 
 
 class ApiManager:
@@ -14,5 +14,8 @@ class ApiManager:
         """
         self.session = session
         self.auth_api = AuthAPI(session)
-        self.user_api = UserAPI(session)
+        self.user_api = UserApi(session)
         self.movies_api = MoviesAPI(session)
+
+    def close_session(self):
+        self.session.close()

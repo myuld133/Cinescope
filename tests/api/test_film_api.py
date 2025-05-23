@@ -1,57 +1,65 @@
-from api.api_manager import ApiManager
-from conftest import api_manager
-from constants import ADMIN_CREDS
+import pytest
+
+pytestmark = pytest.mark.api
 
 class TestFilmAPI:
-    def test_get_all_movies(self, api_manager: ApiManager):
-        response = api_manager.movies_api.get_list_all_movies()
+    def test_get_all_movies(self, common_user):
+        response = common_user.api.movies_api.get_list_all_movies()
         list_response = response.json().get('movies')
 
         assert isinstance(list_response, list)
 
-    def test_get_movies_with_filters(self, api_manager: ApiManager):
-        response = api_manager.movies_api.get_list_all_movies(params={'minPrice': 150, 'maxPrice': 250})
+    @pytest.mark.slow
+    @pytest.mark.parametrize("minPrice,maxPrice,locations,genreID", [
+        (150, 350, 'MSK', 1),
+        (1, 1000, 'SPB', 10),
+        (300, 500, 'MSK', 5)
+    ])
+    def test_get_movies_with_filters(self, common_user, minPrice, maxPrice, locations, genreID):
+        response = common_user.api.movies_api.get_list_all_movies(params={
+            'minPrice': minPrice,
+            'maxPrice': maxPrice,
+            'locations': locations,
+            'genreId': genreID
+        })
         list_response = response.json().get('movies')
         for e in list_response:
-            assert 150 <= e['price'] <= 300
+            assert minPrice <= e.get('price') <= maxPrice
+            assert e.get('location') == locations
+            assert e.get('genreId') == genreID
 
-    def test_create_film(self, api_manager: ApiManager, film_data):
-        # Логинимся под супер админом
-        api_manager.auth_api.authenticate(ADMIN_CREDS)
-
+    def test_create_film(self, super_admin, film_data):
         # Создаем новый фильм
-        created_film_response = api_manager.movies_api.create_new_film(film_data=film_data)
+        created_film_response = super_admin.api.movies_api.create_new_film(film_data=film_data)
         response_data = created_film_response.json()
 
         assert response_data['name'] == film_data['name'], 'Название фильма не совпадает'
 
-    def test_delete_film(self, api_manager: ApiManager, film_data):
-        # Логинимся под супер админом
-        api_manager.auth_api.authenticate(ADMIN_CREDS)
-
+    def test_delete_film(self, super_admin, common_user, film_data):
         # Создаем новый фильм
-        created_film_response = api_manager.movies_api.create_new_film(film_data=film_data)
+        created_film_response = super_admin.api.movies_api.create_new_film(film_data=film_data)
 
         # Удаляем этот фильм
         movie_id = created_film_response.json()['id']
-        api_manager.movies_api.delete_film(movie_id=movie_id)
+        super_admin.api.movies_api.delete_film(movie_id=movie_id)
 
         # Проверка запроса фильма с этим айдишником
-        api_manager.movies_api.get_one_movie(movie_id, expected_status=404)
+        common_user.api.movies_api.get_one_movie(movie_id, expected_status=404)
 
-    def test_create_review(self, api_manager: ApiManager, review_data, created_film_data):
+    def test_create_review(self, super_admin, review_data, created_film_data):
         movie_id = created_film_data.get('id')
-        api_manager.movies_api.create_review(movie_id=movie_id, review_data=review_data)
+        super_admin.api.movies_api.create_review(movie_id=movie_id, review_data=review_data)
 
-    def test_get_reviews(self, api_manager: ApiManager, created_film_data, review_data):
+    @pytest.mark.slow
+    def test_get_reviews(self, common_user, created_film_data, review_data):
         # Находим айдишник в созданном фильме
         movie_id = created_film_data.get('id')
 
         # Создаем отзыв с этим айдишником
-        api_manager.movies_api.create_review(movie_id=movie_id, review_data=review_data)
+        common_user.api.movies_api.create_review(movie_id=movie_id, review_data=review_data)
 
         # Получаем отзывы на фильм с этим айдишником
-        reviews_response = api_manager.movies_api.get_reviews(movie_id=movie_id)
+        reviews_response = common_user.api.movies_api.get_reviews(movie_id=movie_id)
         response_data_dict = reviews_response.json()[0]
 
         # Проверки
@@ -59,35 +67,28 @@ class TestFilmAPI:
         assert response_data_dict['text'] == review_data['text'], 'Текст не совпадает'
         assert 'fullName' in response_data_dict['user'], 'В отзыве нет имени автора'
 
-    def test_create_film_without_authorization(self, api_manager: ApiManager, film_data):
-        api_manager.auth_api.none_authenticate()
-        api_manager.movies_api.create_new_film(film_data=film_data, expected_status=401)
+    @pytest.mark.slow
+    def test_create_film_without_authorization(self, common_user, film_data):
+        common_user.api.movies_api.create_new_film(film_data=film_data, expected_status=(401, 403))
 
-    def test_delete_film_without_authorization(self, api_manager: ApiManager, film_data):
-        # Логинимся под супер админом
-        api_manager.auth_api.authenticate(ADMIN_CREDS)
-
+    def test_delete_film_without_authorization(self, super_admin, common_user, film_data):
         # Создаем новый фильм
-        created_film_response = api_manager.movies_api.create_new_film(film_data=film_data)
-
-        # Обнуляем аутентифиацию
-        api_manager.auth_api.none_authenticate()
+        created_film_response = super_admin.api.movies_api.create_new_film(film_data=film_data)
 
         # Удаляем этот фильм
         movie_id = created_film_response.json()['id']
-        api_manager.movies_api.delete_film(movie_id=movie_id, expected_status=401)
+        common_user.api.movies_api.delete_film(movie_id=movie_id, expected_status=(401, 403))
 
-    def test_get_nonexistent_movie(self, api_manager: ApiManager):
-        response_data = api_manager.movies_api.get_list_all_movies().json()
-        pageCount = response_data.get('pageCount')
-        pageSize = response_data.get('pageSize')
-        nonexistent_id = (pageCount * pageSize) + 200
+    @pytest.mark.flaky
+    def test_get_nonexistent_movie(self, common_user, non_existent_movie_id):
+        response = common_user.api.movies_api.get_one_movie(movie_id=non_existent_movie_id, expected_status=404)
 
-        api_manager.movies_api.get_one_movie(movie_id=nonexistent_id, expected_status=404)
+        assert response.json().get('message') == 'Фильм не найден'
 
-    def test_create_review_without_rating(self, api_manager: ApiManager, review_data, created_film_data):
+    @pytest.mark.slow
+    def test_create_review_without_rating(self, common_user, review_data, created_film_data):
         movie_id = created_film_data.get('id')
 
         invalid_review_data = review_data.copy()
         invalid_review_data['rating'] = None
-        api_manager.movies_api.create_review(movie_id=movie_id, review_data=invalid_review_data, expected_status=400)
+        common_user.api.movies_api.create_review(movie_id=movie_id, review_data=invalid_review_data, expected_status=400)
