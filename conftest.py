@@ -42,7 +42,7 @@ def auth_user_data(api_manager, test_user):
 
 
 @pytest.fixture(scope="function")
-def registered_user(api_manager, test_user):
+def registered_user(api_manager, test_user, super_admin):
     """
     Фикстура для регистрации и получения данных зарегистрированного пользователя.
     """

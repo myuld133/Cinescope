@@ -1,5 +1,7 @@
 import pytest
 
+from models.user_model import User
+
 pytestmark = pytest.mark.api
 
 class TestUser:
@@ -14,7 +16,8 @@ class TestUser:
         assert response.get('verified') is True
 
     def test_get_user_by_locator(self, super_admin, creation_user_data):
-        created_user_response = super_admin.api.user_api.create_user(creation_user_data).json()
+        user = User(**creation_user_data)
+        created_user_response = super_admin.api.user_api.create_user(user.model_dump()).json()
         response_by_id = super_admin.api.user_api.get_user(created_user_response['id']).json()
         response_by_email = super_admin.api.user_api.get_user(created_user_response['email']).json()
 

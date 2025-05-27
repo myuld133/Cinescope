@@ -1,6 +1,7 @@
 import pytest
 
 from api.api_manager import ApiManager
+from models.user_model import User
 from resources.user_creds import SuperAdminCreds
 
 pytestmark = pytest.mark.api
@@ -10,7 +11,8 @@ class TestAuthAPI:
         """
         Тест на регистрацию пользователя.
         """
-        response = api_manager.auth_api.register_user(test_user)
+        user = User(**test_user)
+        response = api_manager.auth_api.register_user(user.model_dump(exclude_unset=True))
         response_data = response.json()
 
         # Проверки
