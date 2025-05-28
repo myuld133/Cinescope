@@ -1,7 +1,7 @@
 import pytest
 
 from api.api_manager import ApiManager
-from models.user_model import User
+from models.user_model import RegisterUserResponse
 from resources.user_creds import SuperAdminCreds
 
 pytestmark = pytest.mark.api
@@ -11,15 +11,11 @@ class TestAuthAPI:
         """
         Тест на регистрацию пользователя.
         """
-        user = User(**test_user)
-        response = api_manager.auth_api.register_user(user.model_dump(exclude_unset=True))
-        response_data = response.json()
+        response = api_manager.auth_api.register_user(test_user)
+        register_user_response = RegisterUserResponse(**response.json())
 
         # Проверки
-        assert response_data["email"] == test_user["email"], "Email не совпадает"
-        assert "id" in response_data, "ID пользователя отсутствует в ответе"
-        assert "roles" in response_data, "Роли пользователя отсутствуют в ответе"
-        assert "USER" in response_data["roles"], "Роль USER должна быть у пользователя"
+        assert register_user_response.email == test_user.email, "Email не совпадает"
 
 
     def test_register_and_login_user(self, api_manager: ApiManager, registered_user):

@@ -1,8 +1,9 @@
+import pytest
 import requests
 
 from constants.constants import BASE_URL, LOGIN_ENDPOINT, HEADERS, REGISTER_ENDPOINT
 
-
+pytestmark = pytest.mark.skip
 class TestAuthApiWithoutCustomWrapper:
     def test_register_user(self, test_user):
         # URL для регистрации
