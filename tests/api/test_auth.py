@@ -1,7 +1,10 @@
 import pytest
+from sqlalchemy.orm import Session
 
 from api.api_manager import ApiManager
+from db_requester.models import UserDBModel
 from models.user_model import RegisterUserResponse
+from models.user_model import TestUser
 from resources.user_creds import SuperAdminCreds
 
 pytestmark = pytest.mark.api
@@ -80,3 +83,22 @@ class TestAuthAPI:
             "password": password
         }
         api_manager.auth_api.login_user(login_data=login_data, expected_status=expected_status)
+
+    @pytest.mark.db
+    def test_register_user_db_session(self, api_manager: ApiManager, test_user: TestUser, db_session: Session):
+        """
+        Тест на регистрацию пользователя с проверкой в базе данных.
+        """
+        # выполняем запрос на регистрацию нового пользователя
+        response = api_manager.auth_api.register_user(test_user)
+        register_user_response = RegisterUserResponse(**response.json())
+
+        # Проверяем добавил ли сервис Auth нового пользователя в базу данных
+        users_from_db = db_session.query(UserDBModel).filter(UserDBModel.id == register_user_response.id)
+
+        # получили объект из бзы данных и проверили что он действительно существует в единственном экземпляре
+        assert users_from_db.count() == 1, "объект не попал в базу данных"
+        # Достаем первый и единственный объект из списка полученных
+        user_from_db = users_from_db.first()
+        # можем осуществить проверку всех полей в базе данных например Email
+        assert user_from_db.email == test_user.email, "Email не совпадает"

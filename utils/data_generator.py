@@ -1,6 +1,8 @@
 import random
 import string
+
 from faker import Faker
+
 faker = Faker()
 
 class DataGenerator:
@@ -38,3 +40,11 @@ class DataGenerator:
         random.shuffle(password)
 
         return ''.join(password)
+
+    @staticmethod
+    def generate_random_str(n):
+        return random.choices(string.ascii_letters, k=n)
+
+    @staticmethod
+    def generate_random_int(n):
+        return ''.join(random.choices('0123456789', k=n))

@@ -1,11 +1,15 @@
+import datetime
 import random
 
 import pytest
 import requests
 from faker import Faker
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from api.api_manager import ApiManager
 from constants.roles import Roles
+from db_requester.models import UserDBModel, MovieDBModel
 from entities.user import User
 from models.user_model import TestUser
 from resources.user_creds import SuperAdminCreds
@@ -207,3 +211,56 @@ def admin(user_session, super_admin, creation_user_data):
     super_admin.api.user_api.create_user(creation_user_data)
     admin.api.auth_api.authenticate(admin.creds)
     return admin
+
+#Оставим эти данные тут для наглядности. но не стоит хранить креды в гитлбе. они должны быть заданы через env
+HOST = "92.255.111.76"
+PORT = 31200
+DATABASE_NAME = "db_movies"
+USERNAME = "postgres"
+PASSWORD = "AmwFrtnR2"
+
+engine = create_engine(f"postgresql+psycopg2://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DATABASE_NAME}") # Создаем движок (engine) для подключения к базе данных
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine) # Создаем фабрику сессий
+
+
+@pytest.fixture(scope="session")
+def db_session():
+    session = SessionLocal()
+
+    db_test_user = UserDBModel(
+        id="test_id",
+        email=DataGenerator.generate_random_email(),
+        full_name=DataGenerator.generate_random_name(),
+        password=DataGenerator.generate_random_password(),
+        created_at=datetime.datetime.now(),
+        updated_at=datetime.datetime.now(),
+        verified=False,
+        banned=False,
+        roles="{USER}"
+    )
+
+    session.query(UserDBModel).filter_by(id="test_id").delete()
+    session.add(db_test_user)
+    session.commit()
+
+    yield session
+    # Гарантированная очистка после теста
+    session.delete(db_test_user)
+    session.commit()
+    session.close()
+
+@pytest.fixture
+def db_test_movie():
+    locations = ['SPB', 'MSK']
+    return MovieDBModel(
+        id=faker.random_int(min=1, max=10000),
+        name=faker.catch_phrase(),
+        description=faker.text(),
+        price=faker.random_int(min=100, max=1000),
+        genre_id=faker.random_int(min=1, max=10),
+        image_url=faker.url(),
+        location=random.choice(locations),
+        rating=faker.random_int(min=1, max=5),
+        published=faker.boolean(),
+        created_at=datetime.datetime.now()
+    )
