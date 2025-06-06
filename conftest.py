@@ -5,10 +5,13 @@ import pytest
 import requests
 from faker import Faker
 from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 from sqlalchemy.orm import sessionmaker
 
 from api.api_manager import ApiManager
 from constants.roles import Roles
+from db_requester.db_client import get_db_session
+from db_requester.db_helpers import DBHelper
 from db_requester.models import UserDBModel, MovieDBModel
 from entities.user import User
 from models.user_model import TestUser
@@ -229,8 +232,8 @@ def db_connection():
     connection.close()
 
 @pytest.fixture(scope="session")
-def db_session():
-    session = SessionLocal()
+def db_session() -> Session:
+    db_session = get_db_session()
 
     db_test_user = UserDBModel(
         id="test_id",
@@ -244,15 +247,15 @@ def db_session():
         roles="{USER}"
     )
 
-    session.query(UserDBModel).filter_by(id="test_id").delete()
-    session.add(db_test_user)
-    session.commit()
+    db_session.query(UserDBModel).filter_by(id="test_id").delete()
+    db_session.add(db_test_user)
+    db_session.commit()
 
-    yield session
+    yield db_session
     # Гарантированная очистка после теста
-    session.delete(db_test_user)
-    session.commit()
-    session.close()
+    db_session.delete(db_test_user)
+    db_session.commit()
+    db_session.close()
 
 @pytest.fixture
 def db_test_movie():
@@ -269,3 +272,23 @@ def db_test_movie():
         published=faker.boolean(),
         created_at=datetime.datetime.now()
     )
+
+@pytest.fixture(scope="function")
+def db_helper(db_session) -> DBHelper:
+    """
+    Фикстура для экземпляра хелпера
+    """
+    db_helper = DBHelper(db_session)
+    return db_helper
+
+@pytest.fixture(scope="function")
+def created_test_user(db_helper):
+    """
+    Фикстура, которая создает тестового пользователя в БД
+    и удаляет его после завершения теста
+    """
+    user = db_helper.create_test_user(DataGenerator.generate_user_data())
+    yield user
+    # Cleanup после теста
+    if db_helper.get_user_by_id(user.id):
+        db_helper.delete_user(user)
