@@ -1,7 +1,6 @@
 import pytest
 
-pytestmark = pytest.mark.api
-
+@pytest.mark.api
 class TestUserAPI:
 
     def test_create_user(self, super_admin, creation_user_data):

@@ -1,7 +1,7 @@
 import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 from constants.roles import Roles
 
@@ -16,6 +16,11 @@ class TestUser(BaseModel):
     roles: List[Roles] = [Roles.USER]
     verified: Optional[bool] = None
     banned: Optional[bool] = None
+    model_config = ConfigDict(
+        json_encoders={
+            Roles: lambda v: v.value  # Преобразуем Enum в строку
+        }
+    )
 
     @field_validator("passwordRepeat")
     def check_password_repeat(cls, value: str, info) -> str:
@@ -24,11 +29,6 @@ class TestUser(BaseModel):
             raise ValueError("Пароли не совпадают")
         return value
 
-    # Добавляем кастомный JSON-сериализатор для Enum
-    class Config:
-        json_encoders = {
-            Roles: lambda v: v.value  # Преобразуем Enum в строку
-        }
 
 class RegisterUserResponse(BaseModel):
     id: str

@@ -5,8 +5,9 @@ from pytz import timezone
 
 from conftest import film_data
 
-pytest.mark = pytest.mark.db
-class TestDB:
+
+@pytest.mark.db
+class TestMovieDB:
     def test_create_movie(self, super_admin, film_data, db_helper):
         # проверяем что до начала тестирования фильма с таким названием нет
         assert not db_helper.movie_exists_by_name(film_data['name']), 'Фильм с таким названием уже существует'

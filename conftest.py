@@ -14,6 +14,7 @@ from db_requester.db_client import get_db_session
 from db_requester.db_helpers import DBHelper
 from db_requester.models import UserDBModel, MovieDBModel
 from entities.user import User
+from models.movie_model import CreatedMovieResponse
 from models.user_model import TestUser
 from resources.user_creds import SuperAdminCreds
 from utils.data_generator import DataGenerator
@@ -121,16 +122,15 @@ def review_data():
     }
 
 @pytest.fixture()
-def created_film_data(super_admin, film_data):
+def created_film(super_admin, film_data):
     # Создаем новый фильм
-    created_film_response = super_admin.api.movies_api.create_new_film(film_data=film_data)
-    created_film_data = created_film_response.json()
+    response = super_admin.api.movies_api.create_new_film(film_data=film_data)
+    created_film = CreatedMovieResponse(**response.json())
 
-    yield created_film_data
+    yield created_film
 
     # Удаляем фильм
-    movie_id = created_film_data.get('id')
-    super_admin.api.movies_api.delete_film(movie_id=movie_id)
+    super_admin.api.movies_api.delete_film(created_film.id)
 
 @pytest.fixture()
 def non_existent_movie_id(common_user):

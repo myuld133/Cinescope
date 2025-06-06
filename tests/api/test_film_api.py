@@ -1,7 +1,9 @@
 import pytest
 
-pytestmark = pytest.mark.api
+from models.movie_model import CreatedMovieResponse
 
+
+@pytest.mark.api
 class TestFilmAPI:
     def test_get_all_movies(self, common_user):
         response = common_user.api.movies_api.get_list_all_movies()
@@ -30,36 +32,36 @@ class TestFilmAPI:
 
     def test_create_film(self, super_admin, film_data):
         # Создаем новый фильм
-        created_film_response = super_admin.api.movies_api.create_new_film(film_data=film_data)
-        response_data = created_film_response.json()
+        response = super_admin.api.movies_api.create_new_film(film_data)
+        created_film = CreatedMovieResponse(**response.json())
 
-        assert response_data['name'] == film_data['name'], 'Название фильма не совпадает'
+        assert created_film.name == film_data['name'], 'Название фильма не совпадает'
 
     def test_delete_film(self, super_admin, common_user, film_data):
         # Создаем новый фильм
-        created_film_response = super_admin.api.movies_api.create_new_film(film_data=film_data)
+        response = super_admin.api.movies_api.create_new_film(film_data=film_data)
+        created_film = CreatedMovieResponse(**response.json())
 
         # Удаляем этот фильм
-        movie_id = created_film_response.json()['id']
-        super_admin.api.movies_api.delete_film(movie_id=movie_id)
+        super_admin.api.movies_api.delete_film(movie_id=created_film.id)
 
         # Проверка запроса фильма с этим айдишником
-        common_user.api.movies_api.get_one_movie(movie_id, expected_status=404)
+        common_user.api.movies_api.get_one_movie(created_film.id, expected_status=404)
 
-    def test_create_review(self, super_admin, review_data, created_film_data):
-        movie_id = created_film_data.get('id')
-        super_admin.api.movies_api.create_review(movie_id=movie_id, review_data=review_data)
+    def test_create_review(self, super_admin, review_data, created_film):
+        created_review = super_admin.api.movies_api.create_review(movie_id=created_film.id, review_data=review_data)
+        created_review_data = created_review.json()
+
+        assert created_review_data['rating'] == review_data['rating']
+        assert created_review_data['text'] == review_data['text']
 
     @pytest.mark.slow
-    def test_get_reviews(self, common_user, created_film_data, review_data):
-        # Находим айдишник в созданном фильме
-        movie_id = created_film_data.get('id')
-
+    def test_get_reviews(self, common_user, created_film, review_data):
         # Создаем отзыв с этим айдишником
-        common_user.api.movies_api.create_review(movie_id=movie_id, review_data=review_data)
+        common_user.api.movies_api.create_review(movie_id=created_film.id, review_data=review_data)
 
         # Получаем отзывы на фильм с этим айдишником
-        reviews_response = common_user.api.movies_api.get_reviews(movie_id=movie_id)
+        reviews_response = common_user.api.movies_api.get_reviews(movie_id=created_film.id)
         response_data_dict = reviews_response.json()[0]
 
         # Проверки
@@ -86,9 +88,7 @@ class TestFilmAPI:
         assert response.json().get('message') == 'Фильм не найден'
 
     @pytest.mark.slow
-    def test_create_review_without_rating(self, common_user, review_data, created_film_data):
-        movie_id = created_film_data.get('id')
-
+    def test_create_review_without_rating(self, common_user, review_data, created_film):
         invalid_review_data = review_data.copy()
         invalid_review_data['rating'] = None
-        common_user.api.movies_api.create_review(movie_id=movie_id, review_data=invalid_review_data, expected_status=400)
+        common_user.api.movies_api.create_review(movie_id=created_film.id, review_data=invalid_review_data, expected_status=400)
