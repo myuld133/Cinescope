@@ -222,6 +222,11 @@ PASSWORD = "AmwFrtnR2"
 engine = create_engine(f"postgresql+psycopg2://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DATABASE_NAME}") # Создаем движок (engine) для подключения к базе данных
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine) # Создаем фабрику сессий
 
+@pytest.fixture(scope="session")
+def db_connection():
+    connection = engine.connect()
+    yield connection
+    connection.close()
 
 @pytest.fixture(scope="session")
 def db_session():

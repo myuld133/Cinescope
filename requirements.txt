@@ -6,3 +6,5 @@ python-dotenv~=1.1.0
 pydantic~=2.11.5
 SQLAlchemy~=2.0.41
 pytz~=2025.2
+pytest-mock~=3.14.1
+allure-python-commons~=2.14.2
