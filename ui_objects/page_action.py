@@ -18,6 +18,10 @@ class PageAction:
     def click_element(self, locator: str):
         self.page.click(locator)
 
+    @allure.step("Выбор опции {value} из списка '{locator}'")
+    def select_option(self, locator: str, value: str):
+        self.page.select_option(locator, value)
+
     @allure.step("Ожидание загрузки страницы: {url}")
     def wait_redirect_for_url(self, url: str):
         self.page.wait_for_url(url)
@@ -31,7 +35,7 @@ class PageAction:
     def wait_for_element(self, locator: str, state: str = "visible"):
         self.page.locator(locator).wait_for(state=state)
 
-    @allure.step("Скриншот текущей страиницы")
+    @allure.step("Скриншот текущей страницы")
     def make_screenshot_and_attach_to_allure(self):
         screenshot_path = "screenshot.png"
         self.page.screenshot(path=screenshot_path, full_page=True)  # full_page=True для скриншота всей страницы

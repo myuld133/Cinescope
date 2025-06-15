@@ -62,3 +62,27 @@ class CinescopLoginPage(BasePage):
 
     def assert_allert_was_pop_up(self):
         self.check_pop_up_element_with_text("Вы вошли в аккаунт")
+
+class CinescopeReviewPage(BasePage):
+    def __init__(self, page: Page):
+        super().__init__(page)
+        self.url = f"{self.home_url}movies"
+
+        # локаторы элементов
+        self.movie_button = "text='Подробнее'"
+        self.send_review_button = "button[data-qa-id='movie_review_submit_button']"
+
+        self.review_input = "[data-qa-id='movie_review_input']"
+
+        # локальные Action методы
+    def open_movie(self):
+        self.open_url(self.url)
+        self.click_element(self.movie_button)
+
+
+    def create_new_review(self, review: str, rating: str):
+        self.enter_text_to_element(self.review_input, review)
+        self.click_element(self.send_review_button)
+
+    def assert_allert_was_pop_up(self):
+        self.check_pop_up_element_with_text("Отзыв успешно создан")
